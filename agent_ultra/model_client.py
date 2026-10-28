@@ -24,7 +24,9 @@ import time
 import urllib.error
 import urllib.request
 
-TIMEOUT = 30
+TIMEOUT = 120  # seconds per model call: first generations after a
+# server start, Render wake-ups and tunnel latency can pass 30s;
+# a slow reply must wait, not fail. Loop rounds still bound the total.
 
 
 def model_api_url():
@@ -69,7 +71,11 @@ class ModelClient:
                     "error": f"{type(exc).__name__}: {exc}",
                     "ms": round((time.perf_counter() - t0) * 1000, 1)}
 
-    def chat(self, messages, max_tokens=512, temperature=0.7, tools=None):
+    def chat(self, messages, max_tokens=256, temperature=0.7, tools=None):
+        # max_tokens 256, not 512: this R1-distilled model spends its
+        # tokens on long thinking traces, and 512 tokens per call ran
+        # past every timeout. 256 keeps a reply + a tool call inside
+        # the reply window while capping the thinking length.
         """Real chat completion through the tunnel. Messages are the
         caller's; this module adds no prompt of its own. `tools`, when
         given, is passed through verbatim (name + parameter schema
