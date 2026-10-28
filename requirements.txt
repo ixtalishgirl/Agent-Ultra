@@ -1,0 +1,4 @@
+# Agent-Ultra runtime dependencies.
+# Everything else is Python stdlib (supabase/drive/model clients use
+# urllib; the chat server uses http.server). No model weights here.
+playwright

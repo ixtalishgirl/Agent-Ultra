@@ -1,0 +1,15 @@
+# Agent-Ultra — Railway service definition.
+# Railway sets $PORT automatically; the chat server binds 0.0.0.0:$PORT.
+# Env vars are set in the Railway dashboard (never in this file):
+#   MODEL_API_URL, SUPABASE_URL, SUPABASE_KEY,
+#   DRIVE_REFRESH_TOKEN, DRIVE_CLIENT_ID, DRIVE_CLIENT_SECRET,
+#   DRIVE_TOOL_FOLDER_ID (optional), AGENT_WORKDIR (optional)
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python3 -m agent_ultra.chat_server --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"

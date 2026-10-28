@@ -1,0 +1,18 @@
+# Never commit secrets, sessions, or work data. Repo is PUBLIC.
+.env
+*.env
+*.pem
+*.key
+*service-account*.json
+*credentials*.json
+__pycache__/
+*.pyc
+.venv/
+chats/
+work/
+copies/
+profiles/
+**/browser-profile/
+reports.jsonl
+*.log
+.DS_Store

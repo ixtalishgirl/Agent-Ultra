@@ -1,0 +1,115 @@
+# Agent-Ultra — configuration (placeholders only)
+
+# Model serving: NOT running from this scaffold. The trained adapter is
+# verified locally (see ARCHITECTURE.md); serving it (llama.cpp) is
+# UNTESTED and is a separate step. No endpoint is claimed live here.
+model:
+  base: "huihui-ai/DeepSeek-R1-Distill-Qwen-14B-abliterated"
+  adapter_local: "~/workspace/agent-os/training/adapter/"
+  adapter_serving: "UNTESTED"
+  endpoint: ""  # empty until serving is real
+
+# PROMPT: intentionally empty. The owner forbids writing ANY prompt
+# content (system prompts, prompt templates, prompt files) without
+# asking her first. This field stays null until she explicitly asks
+# for prompt content. Do not fill it in on your own.
+prompt: null  # PENDING OWNER ASK
+
+# Copies: target is 1000. Simultaneous execution on one host is
+# UNTESTED and, per the scaling math in ARCHITECTURE.md, not feasible
+# on a single VPS. Default concurrency is a safe small number; the
+# head queues the rest in waves.
+copies:
+  target: 1000
+  concurrent_default: 10
+  machine_per_copy: "container (UNTESTED) / local directory on this host"
+
+# Kaggle: the model must be able to use Kaggle. Route is the per-copy
+# real browser (login-capable), which is UNTESTED from this scaffold.
+# No Kaggle account, token, or credential is stored here. Which
+# account copies may use is PENDING the owner's decision.
+kaggle:
+  via: "per-copy browser (UNTESTED)"
+  account: "PENDING OWNER DECISION"
+  quota_note: "Kaggle GPU/TPU quotas apply per account; not assumed."
+
+# Chat UI: served by agent_ultra/chat_server.py (stdlib only).
+# Run: python3 -m agent_ultra.chat_server --port 8000
+# The browser panel lives INSIDE the chat view (not a popup/window);
+# live Chromium render inside it is UNTESTED on this host (no binary),
+# so the panel shows honest browser events, never a fake screen.
+ui:
+  server: "agent_ultra.chat_server"
+  default_port: 8000
+  browser_panel: "in-chat section, AG-UI-shaped events"
+  live_browser: "UNTESTED"
+
+# Extra tools the agent knows (agent_ultra/tools_extra.py, wired into
+# the dispatcher bridge). Statuses are as smoke-tested on this host.
+tools:
+  calculator: "REAL"
+  weather: "REAL"
+  internet_fetch: "REAL"
+  internet_search: "REAL"  # DDG first, Wikipedia OpenSearch fallback (source labelled)
+  imagine: "REAL"  # no-key provider; failure returns an error, never a fake file
+  understand_text: "REAL"
+  understand_file: "REAL"
+  understand_page: "REAL"
+  understand_image: "UNTESTED"  # needs a vision model; 14B base is text-only
+
+# Head: one head above all copies; copies report via reports.jsonl.
+head:
+  report_log: "reports.jsonl"
+  judging: "mechanical ranking only (UNTESTED quality judging)"
+
+# Supabase: wired into the dispatcher bridge (agent_ultra/supabase_client.py
+# + dispatcher_bridge.list_supabase_tools / dispatch_supabase).
+# Connection is env-only: SUPABASE_URL + SUPABASE_KEY (Railway variables).
+# On this host no keys exist, so every call honestly reports
+# NOT CONFIGURED — no save or row is faked. The memories table SQL lives
+# in supabase_client.MEMORIES_TABLE_SQL; the owner runs it once in the
+# Supabase SQL editor (PostgREST has no DDL endpoint).
+supabase:
+  wired: true
+  status: "NOT CONFIGURED (no keys on this host)"
+  env: ["SUPABASE_URL", "SUPABASE_KEY"]
+  tools: ["supabase_status", "supabase_select", "supabase_insert",
+          "supabase_update", "supabase_delete", "supabase_save_memory",
+          "supabase_recall_memories", "supabase_create_table", "supabase_rpc"]
+
+# Drive: the agent's 15 GB tool memory, wired into the dispatcher bridge
+# (agent_ultra/drive_client.py + dispatcher_bridge.list_drive_tools /
+# dispatch_drive). Env-only credentials (OAuth refresh trio, service
+# account path, or access token). No credentials on this host, so every
+# call honestly reports NOT CONFIGURED — no upload or file list faked.
+drive:
+  wired: true
+  status: "NOT CONFIGURED (no credentials on this host)"
+  env: ["DRIVE_REFRESH_TOKEN", "DRIVE_CLIENT_ID", "DRIVE_CLIENT_SECRET",
+        "DRIVE_SERVICE_ACCOUNT_JSON", "DRIVE_ACCESS_TOKEN",
+        "DRIVE_TOOL_FOLDER_ID"]
+  tools: ["drive_status", "drive_list_tools", "drive_upload_tool",
+          "drive_download_tool"]
+
+# Agent-created tools: the agent's own tool pipeline
+# (agent_ultra/tool_pipeline.py, 5 stages: intake, validated_call,
+# execute, evidence, report). Tools live in agent_ultra/custom_tools/
+# with a <name>.test_evidence.json each. First pipeline-created tool:
+# text_counts (words/chars/lines), 4/4 tests passed, dispatched live
+# through the bridge. The pipeline validates provenance + tests; it is
+# NOT a sandbox (custom tools run with the agent's own container
+# privileges, like its own code).
+custom_tools:
+  dir: "agent_ultra/custom_tools/"
+  pipeline: "agent_ultra/tool_pipeline.py"
+  registered: ["text_counts"]
+
+# Self-modification, mechanism level (proven 2026-10-28, no model call):
+# the agent created text_counts through its own pipeline, used it
+# through the dispatcher, then edited its own chat UI through its own
+# shell tool (accent #4f7cff -> #14b8a6 + keyboard focus-visible
+# ring). The MODEL's autonomous self-modification can only be tested
+# after the model is served (MODEL_API_URL) — honestly pending.
+self_modification:
+  mechanism: "PROVEN (pipeline + dispatch + self-edit, no model call)"
+  model_driven: "PENDING (needs serving via MODEL_API_URL)"

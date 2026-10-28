@@ -1,0 +1,21 @@
+# Never bake secrets, sessions, or work data into the image.
+# This repo is PUBLIC — a leaked key here would be catastrophic.
+.env
+*.env
+*.pem
+*.key
+*service-account*.json
+*credentials*.json
+__pycache__/
+*.pyc
+.venv/
+.git/
+chats/
+work/
+copies/
+profiles/
+**/browser-profile/
+reports.jsonl
+*.log
+tests/
+.DS_Store
