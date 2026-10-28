@@ -17,10 +17,11 @@ Serves the professional chat UI (agent_ultra/ui/) plus a JSON API:
                                   no live session exists (never a
                                   placeholder image)
   POST /api/chats/<id>/browser/open     {"url": ...} → AG-UI-shaped
-                                  browser events. Live Chromium launch
-                                  is UNTESTED on this host, so the
-                                  panel shows the honest refusal
-                                  event, never a fake screenshot.
+                                  browser events through the real
+                                  Playwright path; the live screen
+                                  then shows in the panel. On failure
+                                  the event carries the real error,
+                                  never a fake screenshot.
   GET  /api/tools                 the extra tools the agent knows
 
 Model reply loop (see model_loop.py): when a USER message arrives,
@@ -42,7 +43,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .browser_profile import BrowserProfile
 from .chat_store import ChatStore
 from . import model_loop
 from . import tools_extra
@@ -52,40 +52,13 @@ DEFAULT_CHATS = Path(__file__).resolve().parent.parent / "chats"
 
 
 def browser_open_events(store, chat_id, url):
-    """AG-UI-shaped browser events for one open request, inside the
-    chat view. The live launch is UNTESTED here, so the second event
-    records the honest refusal from BrowserProfile.launch()."""
-    events = [{
-        "type": "browser.open_requested",
-        "chat_id": chat_id,
-        "url": url,
-        "panel": "in-chat",
-        "status": "requested",
-    }]
-    profile = BrowserProfile(chat_id, store.chat_dir(chat_id))
-    try:
-        profile.launch()
-        events.append({
-            "type": "browser.opened",
-            "chat_id": chat_id,
-            "url": url,
-            "profile": str(profile.path),
-            "status": "ok",
-        })
-    except NotImplementedError as exc:
-        events.append({
-            "type": "browser.open_failed",
-            "chat_id": chat_id,
-            "url": url,
-            "profile": str(profile.path),
-            "status": "UNTESTED",
-            "detail": str(exc),
-            "note": "Live Chromium is UNTESTED on this host (no binary). "
-                    "The panel shows this event instead of a fake screen.",
-        })
-    for ev in events:
-        store.append_browser_event(chat_id, ev)
-    return events
+    """AG-UI-shaped browser events for one manual open request, inside
+    the chat view. Uses the SAME real browser path as a model open
+    (model_loop.model_browser_open: real Playwright goto, measured
+    ms, session registered for the live screenshot stream). On
+    failure the event carries the real error, never a fake screen.
+    """
+    return model_loop.model_browser_open(store, chat_id, url, source="manual")
 
 
 def make_handler(store):

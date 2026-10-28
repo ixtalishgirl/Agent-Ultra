@@ -138,13 +138,15 @@ def _record(store, chat_id, event):
     return store.append_browser_event(chat_id, event)
 
 
-def model_browser_open(store, chat_id, url):
-    """Run one model-decided browser open through the real browser
-    path and record the real events. Returns the event list.
+def model_browser_open(store, chat_id, url, source="model"):
+    """Run one browser open through the real browser path and record
+    the real events. Returns the event list.
 
     Reuses BrowserProfile (real profile dir) + BrowserSession (real
     Playwright goto action, measured ms). On any failure the session
     is NOT registered and the failure event carries the real error.
+    `source` names who asked: "model" for a model tool call, "manual"
+    for the chat panel's Open button. The browser path is identical.
     """
     events = [{
         "type": "browser.open_requested",
@@ -152,7 +154,7 @@ def model_browser_open(store, chat_id, url):
         "url": url,
         "panel": "in-chat",
         "status": "requested",
-        "source": "model",
+        "source": source,
     }]
     if not isinstance(url, str) or not url.startswith(("http://", "https://")):
         events.append({
@@ -161,7 +163,7 @@ def model_browser_open(store, chat_id, url):
             "url": url,
             "status": "error",
             "detail": "url must start with http:// or https://",
-            "source": "model",
+            "source": source,
         })
         for ev in events:
             _record(store, chat_id, ev)
@@ -186,7 +188,7 @@ def model_browser_open(store, chat_id, url):
             "ms": result["ms"],
             "profile": str(profile.path),
             "status": "ok",
-            "source": "model",
+            "source": source,
         })
     except Exception as exc:
         if session is not None and BROWSER_SESSIONS.get(chat_id) is not session:
@@ -207,7 +209,7 @@ def model_browser_open(store, chat_id, url):
             "url": url,
             "status": "error",
             "detail": f"{type(exc).__name__}: {exc}",
-            "source": "model",
+            "source": source,
         })
     for ev in events:
         _record(store, chat_id, ev)
