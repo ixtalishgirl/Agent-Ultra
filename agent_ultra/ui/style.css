@@ -154,6 +154,12 @@ body {
 .browser-bar { display: flex; gap: 8px; margin-bottom: 10px; }
 .browser-bar input { flex: 1; }
 
+/* Live screen: the real screenshot of the model-opened browser.
+   Hidden until a live session exists (no placeholder image ever). */
+.browser-screen { margin-bottom: 10px; }
+.browser-screen img { width: 100%; border: 1px solid var(--border); border-radius: 8px; }
+.hidden { display: none; }
+
 .browser-events { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .browser-event {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
