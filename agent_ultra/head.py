@@ -44,3 +44,26 @@ class HeadAgent:
             rounds.append([r["copy_id"] for r in current])
         winner = current[0] if current else None
         return rounds, winner
+
+    def compare(self, reports):
+        """Head comparison: examine EVERY returned report and rank
+        it on evidence. Returns one comparison row per report
+        (copy_id, status, score, evidence count) — no report is
+        skipped, so the judgement covers every answer received."""
+        return [{
+            "copy_id": r["copy_id"],
+            "status": r.get("status"),
+            "score": mechanical_score(r),
+            "evidence": len(r.get("evidence") or []),
+        } for r in self.rank(reports)]
+
+    def judge(self, reports):
+        """Full judgement, run only after all copies have returned:
+        bracket rounds + comparison of every report + exactly one
+        winner (or None when no copy reported). Judging here is
+        mechanical comparison on evidence (status + evidence
+        present). Model quality judging is UNTESTED and is not
+        claimed."""
+        rounds, winner = self.run_bracket(reports)
+        return {"rounds": rounds, "winner": winner,
+                "comparison": self.compare(reports)}

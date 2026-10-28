@@ -11,12 +11,24 @@ Serves the professional chat UI (agent_ultra/ui/) plus a JSON API:
                                   chat_store.py — never outside the
                                   agent-ultra workdirs)
   GET  /api/chats/<id>/browser/events   browser panel event log
+  GET  /api/chats/<id>/browser/screenshot  live Playwright screenshot
+                                  bytes for the chat's model-opened
+                                  browser session; honest error when
+                                  no live session exists (never a
+                                  placeholder image)
   POST /api/chats/<id>/browser/open     {"url": ...} → AG-UI-shaped
                                   browser events. Live Chromium launch
                                   is UNTESTED on this host, so the
                                   panel shows the honest refusal
                                   event, never a fake screenshot.
   GET  /api/tools                 the extra tools the agent knows
+
+Model reply loop (see model_loop.py): when a USER message arrives,
+the server runs the model loop — real model reply when MODEL_API_URL
+is configured, honest "model not live yet" agent message otherwise,
+never a fake reply. The model itself may open the browser via a
+browser_open tool call; the live screen then shows in the panel via
+the screenshot endpoint above.
 
 Run:  python3 -m agent_ultra.chat_server --port 8000
 Then open http://127.0.0.1:8000/ in a browser.
@@ -32,6 +44,7 @@ from urllib.parse import urlparse
 
 from .browser_profile import BrowserProfile
 from .chat_store import ChatStore
+from . import model_loop
 from . import tools_extra
 
 UI_DIR = Path(__file__).resolve().parent / "ui"
@@ -93,6 +106,13 @@ def make_handler(store):
             self.end_headers()
             self.wfile.write(data)
 
+        def _send_bytes(self, data, ctype):
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
         def _read_json(self):
             length = int(self.headers.get("Content-Length") or 0)
             raw = self.rfile.read(length) if length else b"{}"
@@ -137,6 +157,17 @@ def make_handler(store):
                         self._send_json(200, {"events": store.browser_events(parts[2])})
                     except (KeyError, ValueError) as exc:
                         self._send_json(404, {"status": "error", "detail": str(exc)})
+                elif len(parts) == 5 and parts[3] == "browser" and parts[4] == "screenshot":
+                    # Live screen, or an honest error: never a placeholder.
+                    if not store.exists(parts[2]):
+                        self._send_json(404, {"status": "error", "detail": "unknown chat"})
+                    else:
+                        try:
+                            png = model_loop.browser_screenshot(parts[2])
+                        except LookupError as exc:
+                            self._send_json(404, {"status": "error", "detail": str(exc)})
+                        else:
+                            self._send_bytes(png, "image/png")
                 else:
                     self._send_json(404, {"status": "error", "detail": "unknown path"})
             else:
@@ -157,11 +188,22 @@ def make_handler(store):
             if len(parts) == 4 and parts[0] == "api" and parts[1] == "chats" and parts[3] == "messages":
                 try:
                     msg = store.append_message(parts[2], body.get("role"), body.get("text"))
-                    self._send_json(201, msg)
                 except KeyError:
                     self._send_json(404, {"status": "error", "detail": "unknown chat"})
                 except ValueError as exc:
                     self._send_json(400, {"status": "error", "detail": str(exc)})
+                else:
+                    # Model reply loop, user messages only: the model
+                    # answers (or opens the browser on its own) when
+                    # MODEL_API_URL is configured; otherwise the loop
+                    # appends the honest not-live message, never a fake.
+                    reply = None
+                    if body.get("role") == "user":
+                        reply = model_loop.run_model_reply(store, parts[2])
+                    out = dict(msg)
+                    if reply is not None:
+                        out["model_reply"] = reply
+                    self._send_json(201, out)
                 return
             if len(parts) == 5 and parts[0] == "api" and parts[1] == "chats" and parts[3] == "browser" and parts[4] == "open":
                 url = body.get("url")
@@ -195,6 +237,10 @@ def make_handler(store):
                     self._send_json(404, {"status": "error", "detail": "unknown chat"})
                 except ValueError as exc:
                     self._send_json(400, {"status": "error", "detail": str(exc)})
+                else:
+                    # Best-effort: a deleted chat must not leave a live
+                    # browser session behind.
+                    model_loop.close_browser_session(parts[2])
                 return
             self._send_json(404, {"status": "error", "detail": "unknown path"})
 

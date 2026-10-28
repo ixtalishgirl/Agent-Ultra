@@ -69,19 +69,25 @@ class ModelClient:
                     "error": f"{type(exc).__name__}: {exc}",
                     "ms": round((time.perf_counter() - t0) * 1000, 1)}
 
-    def chat(self, messages, max_tokens=512, temperature=0.7):
+    def chat(self, messages, max_tokens=512, temperature=0.7, tools=None):
         """Real chat completion through the tunnel. Messages are the
-        caller's; this module adds no prompt of its own."""
+        caller's; this module adds no prompt of its own. `tools`, when
+        given, is passed through verbatim (name + parameter schema
+        only — the caller owns its content) so the model can return
+        tool_calls; those are returned as-is in the result."""
         if not self.configured:
             return {"configured": False,
                     "error": "NOT CONFIGURED: MODEL_API_URL missing"}
         if not isinstance(messages, list) or not messages:
             return {"ok": False, "error": "messages must be a non-empty list"}
-        payload = json.dumps({
+        payload = {
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
-        }).encode("utf-8")
+        }
+        if tools is not None:
+            payload["tools"] = tools
+        payload = json.dumps(payload).encode("utf-8")
         t0 = time.perf_counter()
         try:
             req = urllib.request.Request(
@@ -94,6 +100,7 @@ class ModelClient:
             message = choice.get("message") or {}
             return {"ok": True,
                     "reply": message.get("content", ""),
+                    "tool_calls": message.get("tool_calls") or [],
                     "usage": data.get("usage"),
                     "ms": round((time.perf_counter() - t0) * 1000, 1)}
         except urllib.error.HTTPError as exc:
