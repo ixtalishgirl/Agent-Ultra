@@ -185,37 +185,46 @@
     document.getElementById("browser-panel").classList.toggle("hidden");
   });
 
+  function ensureChat() {
+    if (currentChatId) return Promise.resolve(currentChatId);
+    return api("/api/chats", "POST", {}).then(function (res) {
+      if (res.ok) {
+        selectChat(res.data.chat_id);
+        return res.data.chat_id;
+      }
+      return null;
+    });
+  }
+
   document.getElementById("browser-open").addEventListener("click", function () {
-    if (!currentChatId) {
-      alert("Create or select a chat first.");
-      return;
-    }
     var url = document.getElementById("browser-url").value.trim();
     if (!url) return;
-    api("/api/chats/" + currentChatId + "/browser/open", "POST", { url: url }).then(function (res) {
-      if (res.ok) {
-        renderBrowserEvents(res.data.events || []);
-      } else {
-        renderBrowserEvents([{ type: "browser.open_failed", status: "error", detail: (res.data && res.data.detail) || "request failed" }]);
-      }
+    ensureChat().then(function (chatId) {
+      if (!chatId) return;
+      api("/api/chats/" + chatId + "/browser/open", "POST", { url: url }).then(function (res) {
+        if (res.ok) {
+          renderBrowserEvents(res.data.events || []);
+        } else {
+          renderBrowserEvents([{ type: "browser.open_failed", status: "error", detail: (res.data && res.data.detail) || "request failed" }]);
+        }
+      });
     });
   });
 
   document.getElementById("composer").addEventListener("submit", function (e) {
     e.preventDefault();
-    if (!currentChatId) {
-      alert("Create or select a chat first.");
-      return;
-    }
     var input = document.getElementById("composer-input");
     var text = input.value.trim();
     if (!text) return;
-    input.value = "";
     // The server runs the model loop and appends the real agent
     // message (model reply, or the honest not-live message) — the
     // reloaded chat shows it, so nothing is invented here.
-    api("/api/chats/" + currentChatId + "/messages", "POST", { role: "user", text: text }).then(function () {
-      selectChat(currentChatId);
+    ensureChat().then(function (chatId) {
+      if (!chatId) return;
+      input.value = "";
+      api("/api/chats/" + chatId + "/messages", "POST", { role: "user", text: text }).then(function () {
+        selectChat(chatId);
+      });
     });
   });
 
