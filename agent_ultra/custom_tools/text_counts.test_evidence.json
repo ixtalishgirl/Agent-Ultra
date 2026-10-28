@@ -1,0 +1,83 @@
+{
+  "tool": "text_counts",
+  "description": "Count words, characters, and lines of a given text.",
+  "arg_names": [
+    "text"
+  ],
+  "file": "/home/hatch/workspace/agent-ultra/agent_ultra/custom_tools/text_counts.py",
+  "sha256": "aff6e8c5f6f0d58f7dbea7b31534a7ef9a2b3c31ea05fcb319b05c47a5199fb2",
+  "bytes": 361,
+  "created_utc": "2026-10-28T07:42:48.985847+00:00",
+  "tests_total": 4,
+  "tests_passed": 4,
+  "tests": [
+    {
+      "args": {
+        "text": "Hello world\nSecond line"
+      },
+      "expected": {
+        "words": 4,
+        "chars": 23,
+        "lines": 2
+      },
+      "actual": {
+        "words": 4,
+        "chars": 23,
+        "lines": 2
+      },
+      "passed": true,
+      "detail": null
+    },
+    {
+      "args": {
+        "text": ""
+      },
+      "expected": {
+        "words": 0,
+        "chars": 0,
+        "lines": 0
+      },
+      "actual": {
+        "words": 0,
+        "chars": 0,
+        "lines": 0
+      },
+      "passed": true,
+      "detail": null
+    },
+    {
+      "args": {
+        "text": "One"
+      },
+      "expected": {
+        "words": 1,
+        "chars": 3,
+        "lines": 1
+      },
+      "actual": {
+        "words": 1,
+        "chars": 3,
+        "lines": 1
+      },
+      "passed": true,
+      "detail": null
+    },
+    {
+      "args": {
+        "text": "a  b\n\nc"
+      },
+      "expected": {
+        "words": 3,
+        "chars": 7,
+        "lines": 3
+      },
+      "actual": {
+        "words": 3,
+        "chars": 7,
+        "lines": 3
+      },
+      "passed": true,
+      "detail": null
+    }
+  ]
+}
