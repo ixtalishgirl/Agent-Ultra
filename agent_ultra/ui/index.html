@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent-Ultra — Chat</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <span class="logo">Agent-Ultra</span>
+      <button id="new-chat" class="btn primary" type="button">+ New chat</button>
+    </div>
+    <ul id="chat-list" class="chat-list" aria-label="Chats"></ul>
+    <div class="sidebar-foot">
+      <div class="foot-label">Tools the agent knows</div>
+      <div id="tool-chips" class="tool-chips"></div>
+      <div class="foot-note">Live browser is UNTESTED on this host — the panel shows real events, never a fake screen.</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="chat-head">
+      <h1 id="chat-title">No chat selected</h1>
+      <button id="toggle-browser" class="btn" type="button">Browser panel</button>
+    </header>
+
+    <div id="messages" class="messages">
+      <p class="empty">Select a chat, or create a new one to start.</p>
+    </div>
+
+    <!-- IN-CHAT BROWSER PANEL: inside the chat view, not a popup,
+         not a new window. Fed by AG-UI-shaped browser events. -->
+    <section id="browser-panel" class="browser-panel" aria-label="In-chat browser">
+      <div class="browser-head">
+        <span class="browser-title">Browser — inside this chat</span>
+        <span id="browser-status" class="browser-status">idle</span>
+      </div>
+      <div class="browser-bar">
+        <input id="browser-url" type="url" placeholder="https://example.com" aria-label="URL to open in the chat browser">
+        <button id="browser-open" class="btn primary" type="button">Open in chat</button>
+      </div>
+      <div id="browser-events" class="browser-events">
+        <p class="empty">No browser events yet. Open a URL above and its real events appear here.</p>
+      </div>
+    </section>
+
+    <form id="composer" class="composer">
+      <input id="composer-input" type="text" placeholder="Type a message…" aria-label="Message" autocomplete="off">
+      <button class="btn primary" type="submit">Send</button>
+    </form>
+  </main>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
