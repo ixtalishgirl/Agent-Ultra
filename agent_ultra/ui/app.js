@@ -1,7 +1,9 @@
 /* Agent-Ultra chat UI logic. No demo chats, no fake content: the list,
    messages, and browser events all come from the server API. Agent
-   replies are NOT faked: model serving is UNTESTED, so the UI shows an
-   honest notice instead of inventing a reply. */
+   replies come from the server's model loop (real model reply when
+   MODEL_API_URL is configured, honest not-live message otherwise) —
+   never invented here. The browser panel shows the live screenshot
+   of a model-opened browser session, or the honest no-session state. */
 (function () {
   var currentChatId = null;
 
@@ -47,6 +49,7 @@
         api("/api/chats/" + c.chat_id, "DELETE").then(function () {
           if (currentChatId === c.chat_id) {
             currentChatId = null;
+            stopScreenshotPoll();
             document.getElementById("chat-title").textContent = "No chat selected";
             document.getElementById("messages").innerHTML =
               '<p class="empty">Select a chat, or create a new one to start.</p>';
@@ -91,7 +94,7 @@
     var box = document.getElementById("browser-events");
     var status = document.getElementById("browser-status");
     if (!events.length) {
-      box.innerHTML = '<p class="empty">No browser events yet. Open a URL above and its real events appear here.</p>';
+      box.innerHTML = '<p class="empty">No browser events yet. The model opens the browser on its own when it decides to — its real events appear here.</p>';
       status.textContent = "idle";
       status.className = "browser-status";
       return;
@@ -108,6 +111,56 @@
     status.className = "browser-status" + (last.status === "UNTESTED" ? " untested" : "");
   }
 
+  // Live screen: poll the screenshot endpoint while a chat is
+  // selected. A live session returns real PNG bytes; no session
+  // returns an error, shown as the honest no-session state — never a
+  // placeholder image.
+  var screenshotTimer = null;
+  var screenshotObjectUrl = null;
+
+  function showNoSession() {
+    var img = document.getElementById("browser-screenshot");
+    var note = document.getElementById("browser-nosession");
+    if (screenshotObjectUrl) {
+      URL.revokeObjectURL(screenshotObjectUrl);
+      screenshotObjectUrl = null;
+    }
+    img.classList.add("hidden");
+    img.removeAttribute("src");
+    note.classList.remove("hidden");
+  }
+
+  function refreshScreenshot() {
+    if (!currentChatId) return;
+    fetch("/api/chats/" + currentChatId + "/browser/screenshot")
+      .then(function (r) {
+        if (!r.ok) { showNoSession(); return null; }
+        return r.blob();
+      })
+      .then(function (blob) {
+        if (!blob) return;
+        var img = document.getElementById("browser-screenshot");
+        var note = document.getElementById("browser-nosession");
+        if (screenshotObjectUrl) URL.revokeObjectURL(screenshotObjectUrl);
+        screenshotObjectUrl = URL.createObjectURL(blob);
+        img.src = screenshotObjectUrl;
+        img.classList.remove("hidden");
+        note.classList.add("hidden");
+      })
+      .catch(function () { showNoSession(); });
+  }
+
+  function startScreenshotPoll() {
+    if (screenshotTimer) clearInterval(screenshotTimer);
+    refreshScreenshot();
+    screenshotTimer = setInterval(refreshScreenshot, 2000);
+  }
+
+  function stopScreenshotPoll() {
+    if (screenshotTimer) { clearInterval(screenshotTimer); screenshotTimer = null; }
+    showNoSession();
+  }
+
   function selectChat(chatId) {
     currentChatId = chatId;
     api("/api/chats/" + chatId).then(function (res) {
@@ -119,6 +172,7 @@
     api("/api/chats/" + chatId + "/browser/events").then(function (res) {
       if (res.ok) renderBrowserEvents(res.data.events || []);
     });
+    startScreenshotPoll();
   }
 
   document.getElementById("new-chat").addEventListener("click", function () {
@@ -157,15 +211,11 @@
     var text = input.value.trim();
     if (!text) return;
     input.value = "";
+    // The server runs the model loop and appends the real agent
+    // message (model reply, or the honest not-live message) — the
+    // reloaded chat shows it, so nothing is invented here.
     api("/api/chats/" + currentChatId + "/messages", "POST", { role: "user", text: text }).then(function () {
       selectChat(currentChatId);
-      // Honest notice, stored nowhere as an agent reply: model serving
-      // is UNTESTED, so no reply is invented here.
-      var box = document.getElementById("messages");
-      var note = document.createElement("div");
-      note.className = "notice";
-      note.textContent = "Model serving is UNTESTED — no agent reply is available yet, so none is faked here.";
-      box.appendChild(note);
     });
   });
 

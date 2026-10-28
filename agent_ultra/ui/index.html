@@ -42,8 +42,16 @@
         <input id="browser-url" type="url" placeholder="https://example.com" aria-label="URL to open in the chat browser">
         <button id="browser-open" class="btn primary" type="button">Open in chat</button>
       </div>
+      <!-- LIVE SCREEN: shows the real screenshot of the browser the
+           MODEL opened in this chat (refreshed while the session is
+           live). No session means the honest no-session state below —
+           never a placeholder image. -->
+      <div class="browser-screen">
+        <img id="browser-screenshot" alt="Live browser screen" class="hidden">
+        <p id="browser-nosession" class="empty">No live browser session — the model has not opened a browser in this chat yet.</p>
+      </div>
       <div id="browser-events" class="browser-events">
-        <p class="empty">No browser events yet. Open a URL above and its real events appear here.</p>
+        <p class="empty">No browser events yet. The model opens the browser on its own when it decides to — its real events appear here.</p>
       </div>
     </section>
 
